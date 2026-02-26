@@ -18,17 +18,22 @@ export class MovimientoMaterial
     container: HTMLDivElement
   ): void {
     this.container = container;
-    this.container.style.width    = "100%";
-    this.container.style.height   = "100%";
-    this.container.style.overflow = "hidden";
     this.container.style.position = "relative";
-    this.container.style.display  = "flex";
-    this.container.style.flexDirection = "column";
+    this.container.style.overflow = "hidden";
+    this.container.style.boxSizing = "border-box";
+    const w = context.mode.allocatedWidth;
+    const h = context.mode.allocatedHeight;
+    this.container.style.width  = w > 0 ? w + "px" : "100%";
+    this.container.style.height = h > 0 ? h + "px" : "100%";
     this.notifyOutputChanged = notifyOutputChanged;
     this.root = renderApp(this.container, this.buildProps(context), null);
   }
 
   updateView(context: ComponentFramework.Context<IInputs>): void {
+    const w = context.mode.allocatedWidth;
+    const h = context.mode.allocatedHeight;
+    if (w > 0) this.container.style.width  = w + "px";
+    if (h > 0) this.container.style.height = h + "px";
     this.root = renderApp(this.container, this.buildProps(context), this.root);
   }
 
