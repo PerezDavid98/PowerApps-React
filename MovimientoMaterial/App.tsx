@@ -299,9 +299,11 @@ interface AppProps {
   colaboradoresJSON: string;
   onOutput: (json: string) => void;
   onBoletaSelect?: (id: string) => void;
+  w: number;
+  h: number;
 }
 
-const App: React.FC<AppProps> = ({boletasJSON,boletaJSON,detallesJSON,colaboradoresJSON,onOutput,onBoletaSelect}) => {
+const App: React.FC<AppProps> = ({boletasJSON,boletaJSON,detallesJSON,colaboradoresJSON,onOutput,onBoletaSelect,w,h}) => {
   const boletas    = parseOrDefault<Boleta[]>(boletasJSON, boletasJSON ? [] : MOCK_BOLETAS);
   const colabList  = parseOrDefault<Colaborador[]>(colaboradoresJSON, MOCK_COLAB);
 
@@ -391,8 +393,16 @@ const App: React.FC<AppProps> = ({boletasJSON,boletaJSON,detallesJSON,colaborado
   // 
   // RENDER EXITO
   // 
+  const rootStyle: React.CSSProperties = {
+    width:  w > 0 ? w : "100%",
+    height: h > 0 ? h : "100vh",
+    overflow: "hidden",
+    position: "relative",
+    boxSizing: "border-box",
+  };
+
   if (fase==="exito") return (
-    <div style={{width:"100%",height:"100%",overflow:"hidden",position:"relative",background:"#0f172a",display:"flex",flexDirection:"column",
+    <div style={{...rootStyle,background:"#0f172a",display:"flex",flexDirection:"column",
       alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',sans-serif",color:"#e2e8f0",gap:20}}>
       <div style={{background:"#16a34a20",border:"2px solid #4ade80",borderRadius:"50%",
         width:80,height:80,display:"flex",alignItems:"center",justifyContent:"center",fontSize:40}}>ok</div>
@@ -420,7 +430,7 @@ const App: React.FC<AppProps> = ({boletasJSON,boletaJSON,detallesJSON,colaborado
   );
 
   return (
-    <div style={{width:"100%",height:"100%",overflow:"hidden",position:"relative",background:"#0f172a",fontFamily:"'Segoe UI',system-ui,sans-serif",
+    <div style={{...rootStyle,background:"#0f172a",fontFamily:"'Segoe UI',system-ui,sans-serif",
       color:"#e2e8f0",display:"flex",flexDirection:"column"}}>
       {loading && <Spinner/>}
 
