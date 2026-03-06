@@ -10,17 +10,22 @@ export class AvanceObra
 
   init(
     context: ComponentFramework.Context<IInputs>,
-    notifyOutputChanged: () => void,
-    state: ComponentFramework.Dictionary,
+    _notifyOutputChanged: () => void,
+    _state: ComponentFramework.Dictionary,
     container: HTMLDivElement
   ): void {
     this.container = container;
-    this.root = renderApp(container, "");
+    this.container.style.position = "relative";
+    this.container.style.overflow = "hidden";
+    this.container.style.width    = "100%";
+    this.container.style.height   = "100%";
+    this.root = renderApp(container, { ctx: context }, null);
   }
 
   updateView(context: ComponentFramework.Context<IInputs>): void {
-    const value = context.parameters.sampleProperty.raw ?? "";
-    this.root = renderApp(this.container, value);
+    const w = context.mode.allocatedWidth  > 0 ? context.mode.allocatedWidth  : undefined;
+    const h = context.mode.allocatedHeight > 0 ? context.mode.allocatedHeight : undefined;
+    this.root = renderApp(this.container, { ctx: context, w, h }, this.root);
   }
 
   getOutputs(): IOutputs {
@@ -31,3 +36,4 @@ export class AvanceObra
     this.root.unmount();
   }
 }
+
