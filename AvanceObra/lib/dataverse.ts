@@ -1,75 +1,68 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { usePcfContext } from './pcf-context';
-import {
-  dvEtapaToEtapa, dvCasaToInternal,
-  type DvEtapa, type DvCasa, type DvAvance,
-  type Etapa, type Casa,
-} from '../store/data';
+import { colorForIndex, colorSoftForIndex, type Etapa, type Casa } from '../store/data';
 
-// ─── ETAPAS ───────────────────────────────────────────────────────────────────
+// ─── DATOS MOCK ───────────────────────────────────────────────────────────────
+
+const MOCK_ETAPAS: Etapa[] = [
+  { id: 'e1', nombre: 'Preliminares',       orden: 1, categoria: 'Obra gris',   color: colorForIndex(0), colorSoft: colorSoftForIndex(0) },
+  { id: 'e2', nombre: 'Cimentación',        orden: 2, categoria: 'Obra gris',   color: colorForIndex(1), colorSoft: colorSoftForIndex(1) },
+  { id: 'e3', nombre: 'Estructura',         orden: 3, categoria: 'Obra gris',   color: colorForIndex(2), colorSoft: colorSoftForIndex(2) },
+  { id: 'e4', nombre: 'Paredes',            orden: 4, categoria: 'Obra gris',   color: colorForIndex(3), colorSoft: colorSoftForIndex(3) },
+  { id: 'e5', nombre: 'Instalaciones',      orden: 5, categoria: 'Acabados',    color: colorForIndex(4), colorSoft: colorSoftForIndex(4) },
+  { id: 'e6', nombre: 'Acabados',           orden: 6, categoria: 'Acabados',    color: colorForIndex(5), colorSoft: colorSoftForIndex(5) },
+  { id: 'e7', nombre: 'Entrega',            orden: 7, categoria: 'Cierre',      color: colorForIndex(6), colorSoft: colorSoftForIndex(6) },
+];
+
+let mockCasas: Casa[] = [
+  // Preliminares
+  { id: 'c1',  lote: 'L-01', modelo: 'Modelo A', proyecto: 'Residencial Los Robles',   vendedor: 'Carlos Mora',    comprador: 'Ana Jiménez',    etapaId: 'e1', estado: 'En proceso',  avance: 35,  fechaInicio: '2026-01-15', fechaFinEsperada: '2026-04-30' },
+  { id: 'c2',  lote: 'L-02', modelo: 'Modelo B', proyecto: 'Residencial Los Robles',   vendedor: 'Carlos Mora',    comprador: 'Pedro Solís',    etapaId: 'e1', estado: 'Pendiente',   avance: 10,  fechaInicio: '2026-02-01', fechaFinEsperada: '2026-05-15' },
+  // Cimentación
+  { id: 'c3',  lote: 'L-03', modelo: 'Modelo A', proyecto: 'Residencial Los Robles',   vendedor: 'María Vargas',   comprador: 'Luis Herrera',   etapaId: 'e2', estado: 'En proceso',  avance: 55,  fechaInicio: '2025-12-01', fechaFinEsperada: '2026-03-20' },
+  { id: 'c4',  lote: 'L-04', modelo: 'Modelo C', proyecto: 'Condominio Vista Azul',    vendedor: 'María Vargas',   comprador: 'Rosa Méndez',    etapaId: 'e2', estado: 'Retrasado',   avance: 40,  fechaInicio: '2025-11-15', fechaFinEsperada: '2026-02-28' },
+  // Estructura
+  { id: 'c5',  lote: 'L-05', modelo: 'Modelo B', proyecto: 'Condominio Vista Azul',    vendedor: 'Jorge Arias',    comprador: 'Daniel Rojas',   etapaId: 'e3', estado: 'En proceso',  avance: 70,  fechaInicio: '2025-10-10', fechaFinEsperada: '2026-03-15' },
+  { id: 'c6',  lote: 'L-06', modelo: 'Modelo A', proyecto: 'Residencial Los Robles',   vendedor: 'Jorge Arias',    comprador: 'Marta Soto',     etapaId: 'e3', estado: 'En proceso',  avance: 65,  fechaInicio: '2025-10-20', fechaFinEsperada: '2026-03-30' },
+  { id: 'c7',  lote: 'L-07', modelo: 'Modelo C', proyecto: 'Condominio Vista Azul',    vendedor: 'Carlos Mora',    comprador: undefined,         etapaId: 'e3', estado: 'Pendiente',   avance: 50,  fechaInicio: '2025-11-01', fechaFinEsperada: '2026-04-10' },
+  // Paredes
+  { id: 'c8',  lote: 'L-08', modelo: 'Modelo B', proyecto: 'Residencial Los Robles',   vendedor: 'María Vargas',   comprador: 'Sofía Campos',   etapaId: 'e4', estado: 'En proceso',  avance: 80,  fechaInicio: '2025-09-15', fechaFinEsperada: '2026-02-28' },
+  { id: 'c9',  lote: 'L-09', modelo: 'Modelo A', proyecto: 'Torres del Valle',         vendedor: 'Jorge Arias',    comprador: 'Andrés Quesada', etapaId: 'e4', estado: 'Retrasado',   avance: 60,  fechaInicio: '2025-08-20', fechaFinEsperada: '2026-01-31' },
+  // Instalaciones
+  { id: 'c10', lote: 'L-10', modelo: 'Modelo C', proyecto: 'Torres del Valle',         vendedor: 'Carlos Mora',    comprador: 'Laura Chaves',   etapaId: 'e5', estado: 'En proceso',  avance: 85,  fechaInicio: '2025-07-10', fechaFinEsperada: '2026-02-15' },
+  { id: 'c11', lote: 'L-11', modelo: 'Modelo A', proyecto: 'Residencial Los Robles',   vendedor: 'María Vargas',   comprador: 'Fernando Brenes',etapaId: 'e5', estado: 'En proceso',  avance: 90,  fechaInicio: '2025-07-01', fechaFinEsperada: '2026-01-31' },
+  // Acabados
+  { id: 'c12', lote: 'L-12', modelo: 'Modelo B', proyecto: 'Torres del Valle',         vendedor: 'Jorge Arias',    comprador: 'Carmen Alfaro',  etapaId: 'e6', estado: 'En proceso',  avance: 95,  fechaInicio: '2025-05-15', fechaFinEsperada: '2026-01-15' },
+  // Entrega
+  { id: 'c13', lote: 'L-13', modelo: 'Modelo A', proyecto: 'Condominio Vista Azul',    vendedor: 'Carlos Mora',    comprador: 'Roberto Fallas', etapaId: 'e7', estado: 'Completado',  avance: 100, fechaInicio: '2025-03-01', fechaFinEsperada: '2025-12-15', fechaCompletado: '2025-12-10' },
+  { id: 'c14', lote: 'L-14', modelo: 'Modelo C', proyecto: 'Residencial Los Robles',   vendedor: 'María Vargas',   comprador: 'Isabel Monge',   etapaId: 'e7', estado: 'Completado',  avance: 100, fechaInicio: '2025-02-15', fechaFinEsperada: '2025-11-30', fechaCompletado: '2025-11-28' },
+];
+
+// ─── HOOKS (datos mock) ───────────────────────────────────────────────────────
+
 export function useEtapas() {
-  const ctx = usePcfContext();
   return useQuery<Etapa[]>({
     queryKey: ['etapas'],
-    queryFn: async () => {
-      const r = await ctx.webAPI.retrieveMultipleRecords(
-        'cr8f2_etapas',
-        '?$select=cr8f2_etapasid,cr8f2_nombreetapa,cr8f2_ordenetapa,cr8f2_categoria,cr8f2_descripcion&$orderby=cr8f2_ordenetapa asc'
-      );
-      return (r.entities as DvEtapa[]).map((e, i) => dvEtapaToEtapa(e, i));
-    },
-    staleTime: 5 * 60 * 1000,
+    queryFn: async () => MOCK_ETAPAS,
+    staleTime: Infinity,
   });
 }
 
-// ─── AVANCES ─────────────────────────────────────────────────────────────────
-export function useAvances() {
-  const ctx = usePcfContext();
-  return useQuery<DvAvance[]>({
-    queryKey: ['avances'],
-    queryFn: async () => {
-      const r = await ctx.webAPI.retrieveMultipleRecords(
-        'cr8f2_avanceconstruccion',
-        '?$select=cr8f2_avanceconstruccionid,_cr8f2_casaid_value,_cr8f2_etapaid_value,cr8f2_porcentajeavance,cr8f2_estado,cr8f2_fechainicio,cr8f2_fechafinEsperada,cr8f2_fechacompletado'
-      );
-      return r.entities as DvAvance[];
-    },
-    staleTime: 2 * 60 * 1000,
-  });
-}
-
-// ─── CASAS ────────────────────────────────────────────────────────────────────
 export function useCasas() {
-  const ctx = usePcfContext();
-  const avancesQuery = useAvances();
-
   return useQuery<Casa[]>({
     queryKey: ['casas'],
-    queryFn: async () => {
-      const r = await ctx.webAPI.retrieveMultipleRecords(
-        'cr8f2_casas',
-        '?$select=cr8f2_casasid,cr8f2_numerodelope,cr8f2_modelocasa,cr8f2_proyecto,cr8f2_nombrevendedor,cr8f2_nombrecomprador,cr8f2_estadogeneral,cr8f2_observaciones,_cr8f2_etapaactual_value'
-      );
-      const avances = avancesQuery.data ?? [];
-      return (r.entities as DvCasa[]).map(c => dvCasaToInternal(c, avances));
-    },
-    enabled: avancesQuery.isSuccess || avancesQuery.isError,
+    queryFn: async () => [...mockCasas],
     staleTime: 2 * 60 * 1000,
   });
 }
 
-// ─── MOVER CASA A OTRA ETAPA ─────────────────────────────────────────────────
 export function useMoverCasa() {
-  const ctx = usePcfContext();
-  const qc  = useQueryClient();
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ casaId, etapaId }: { casaId: string; etapaId: string }) =>
-      ctx.webAPI.updateRecord('cr8f2_casas', casaId, {
-        'cr8f2_etapaactual@odata.bind': `/cr8f2_etapases(${etapaId})`,
-      }),
+    mutationFn: async ({ casaId, etapaId }: { casaId: string; etapaId: string }) => {
+      mockCasas = mockCasas.map(c => c.id === casaId ? { ...c, etapaId } : c);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['casas'] });
-      qc.invalidateQueries({ queryKey: ['avances'] });
     },
   });
 }
