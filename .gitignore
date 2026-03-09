@@ -2,19 +2,30 @@
 
 # dependencies
 /node_modules
+**/node_modules
 
 # generated directory
 **/generated
 
-# output directory
+# output directories
 /out
+**/out
 
 # msbuild output directories
 /bin
 /obj
+**/bin
+**/obj
 
 # MSBuild Binary and Structured Log
 *.binlog
+
+# package lock (generated)
+package-lock.json
+**/package-lock.json
+
+# build logs
+*.log
 
 # Visual Studio cache/options directory
 /.vs

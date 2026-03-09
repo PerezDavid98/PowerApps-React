@@ -1,31 +1,54 @@
 import React, { useCallback, useMemo } from 'react';
-import { useAtom, useSetAtom } from 'jotai';
-import { draggedIdAtom, seleccionadaAtom, busquedaAtom } from '../store/atoms';
+import { useAtom, useSetAtom, useAtomValue } from 'jotai';
+import { draggedIdAtom, seleccionadaAtom, detalleModoAtom, filtroProyectoAtom, filtroModeloAtom, filtroVendedorAtom, filtroEstadoAtom } from '../store/atoms';
 import { useEtapas, useCasas, useMoverCasa } from '../lib/dataverse';
 import { ColumnaKanban } from '../components/kanban/columna-kanban';
-import { PanelDetalle } from '../components/kanban/panel-detalle';
+import { PanelDetalle } from '../components/kanban/panelDetalle';
 import { toast } from 'sonner';
+
+const CAT_ICONS: Record<string, string> = {
+  'Freezer': '❄️', 'Obra gris': '🧱', 'Obra Gris': '🧱',
+  'Acabados': '🎨', 'Instalaciones': '⚡', 'Otros': '📦', 'Cierre': '✅',
+};
+const CAT_COLORS: Record<string, string> = {
+  'Freezer': '#06b6d4', 'Obra gris': '#f59e0b', 'Obra Gris': '#f59e0b',
+  'Acabados': '#8b5cf6', 'Instalaciones': '#f97316', 'Otros': '#ec4899', 'Cierre': '#10b981',
+};
 
 export default function HomePage() {
   const [draggedId, setDraggedId]   = useAtom(draggedIdAtom);
   const setSeleccionada              = useSetAtom(seleccionadaAtom);
-  const busqueda                     = useMemo(() => '', []);
-  void busqueda;
+  const setDetalleModo               = useSetAtom(detalleModoAtom);
+
+  const filtroProyecto  = useAtomValue(filtroProyectoAtom);
+  const filtroModelo    = useAtomValue(filtroModeloAtom);
+  const filtroVendedor  = useAtomValue(filtroVendedorAtom);
+  const filtroEstado    = useAtomValue(filtroEstadoAtom);
 
   const etapasQ = useEtapas();
   const casasQ  = useCasas();
   const mover   = useMoverCasa();
 
   const etapas = etapasQ.data ?? [];
-  const casas  = casasQ.data  ?? [];
+  const casasRaw  = casasQ.data  ?? [];
+
+  // Aplicar filtros globales
+  const casas = useMemo(() => {
+    let result = casasRaw;
+    if (filtroProyecto)  result = result.filter(c => c.proyecto === filtroProyecto);
+    if (filtroModelo)    result = result.filter(c => c.modelo === filtroModelo);
+    if (filtroVendedor)  result = result.filter(c => c.vendedor === filtroVendedor);
+    if (filtroEstado)    result = result.filter(c => c.estado === filtroEstado);
+    return result;
+  }, [casasRaw, filtroProyecto, filtroModelo, filtroVendedor, filtroEstado]);
 
   const handleDragStart = useCallback((id: string) => setDraggedId(id), [setDraggedId]);
   const handleDragEnd   = useCallback(() => setDraggedId(null), [setDraggedId]);
 
-  const handleDrop = useCallback((etapaId: string) => {
+  const handleDrop = useCallback((etapaId: string, insertIndex?: number) => {
     if (!draggedId) return;
     mover.mutate(
-      { casaId: draggedId, etapaId },
+      { casaId: draggedId, etapaId, insertIndex },
       {
         onSuccess: () => {
           setSeleccionada(prev =>
@@ -58,20 +81,76 @@ export default function HomePage() {
     );
   }
 
+  // ─── Agrupar etapas por categoría ──────────────────────────────────────────
+  const grupos = useMemo(() => {
+    const map = new Map<string, typeof etapas>();
+    for (const e of etapas) {
+      const cat = e.categoria || 'Sin categoría';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(e);
+    }
+    return Array.from(map.entries());
+  }, [etapas]);
+
   return (
     <>
-      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'hidden', display: 'flex', gap: 10, padding: '14px 16px', alignItems: 'flex-start', background: '#f5f7f5' }}>
-        {etapas.map(etapa => (
-          <ColumnaKanban
-            key={etapa.id}
-            etapa={etapa}
-            casas={casas.filter(c => c.etapaId === etapa.id)}
-            draggedId={draggedId}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDrop={handleDrop}
-          />
-        ))}
+      <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', padding: '10px 16px 14px', background: '#f5f7f5' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <button
+            onClick={() => {
+              setDetalleModo('create');
+              setSeleccionada(null);
+            }}
+            style={{
+              background: '#ADD010', border: 'none', borderRadius: 10,
+              padding: '8px 14px', color: '#1a2535', fontSize: 12,
+              fontWeight: 800, cursor: 'pointer',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#96b80e')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#ADD010')}
+          >
+            + Nueva Obra
+          </button>
+        </div>
+
+        {grupos.map(([categoria, etapasGrupo]) => {
+          const catColor = CAT_COLORS[categoria] ?? '#64748b';
+          const catIcon  = CAT_ICONS[categoria]  ?? '📋';
+          return (
+            <div key={categoria} style={{ marginBottom: 16 }}>
+              {/* Header de categoría */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 12px', marginBottom: 8,
+                background: `${catColor}12`, border: `1px solid ${catColor}30`,
+                borderRadius: 10,
+              }}>
+                <span style={{ fontSize: 15 }}>{catIcon}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: catColor, textTransform: 'uppercase', letterSpacing: '.5px' }}>
+                  {categoria}
+                </span>
+                <span style={{ fontSize: 11, color: `${catColor}99`, fontWeight: 600 }}>
+                  ({etapasGrupo.length} etapa{etapasGrupo.length !== 1 ? 's' : ''})
+                </span>
+              </div>
+
+              {/* Columnas del grupo */}
+              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, alignItems: 'flex-start' }}>
+                {etapasGrupo.map(etapa => (
+                  <ColumnaKanban
+                    key={etapa.id}
+                    etapa={etapa}
+                    casas={casas.filter(c => c.etapaId === etapa.id)}
+                    draggedId={draggedId}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDrop={handleDrop}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
         {etapas.length === 0 && !etapasQ.isPending && (
           <div style={{ flex: 1, textAlign: 'center', color: '#94a3b8', fontSize: 14, paddingTop: 40 }}>
             No hay etapas configuradas en Dataverse.
@@ -79,7 +158,7 @@ export default function HomePage() {
         )}
       </div>
 
-      <PanelDetalle etapas={etapas} />
+      <PanelDetalle etapas={etapas} casas={casas} />
     </>
   );
 }

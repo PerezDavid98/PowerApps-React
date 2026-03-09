@@ -4,16 +4,19 @@ import { colorForIndex, colorSoftForIndex, type Etapa, type Casa } from '../stor
 // ─── DATOS MOCK ───────────────────────────────────────────────────────────────
 
 const MOCK_ETAPAS: Etapa[] = [
-  { id: 'e1', nombre: 'Preliminares',       orden: 1, categoria: 'Obra gris',   color: colorForIndex(0), colorSoft: colorSoftForIndex(0) },
-  { id: 'e2', nombre: 'Cimentación',        orden: 2, categoria: 'Obra gris',   color: colorForIndex(1), colorSoft: colorSoftForIndex(1) },
-  { id: 'e3', nombre: 'Estructura',         orden: 3, categoria: 'Obra gris',   color: colorForIndex(2), colorSoft: colorSoftForIndex(2) },
-  { id: 'e4', nombre: 'Paredes',            orden: 4, categoria: 'Obra gris',   color: colorForIndex(3), colorSoft: colorSoftForIndex(3) },
-  { id: 'e5', nombre: 'Instalaciones',      orden: 5, categoria: 'Acabados',    color: colorForIndex(4), colorSoft: colorSoftForIndex(4) },
-  { id: 'e6', nombre: 'Acabados',           orden: 6, categoria: 'Acabados',    color: colorForIndex(5), colorSoft: colorSoftForIndex(5) },
+  { id: 'e0', nombre: 'Freezer',            orden: 0, categoria: 'Freezer',     color: '#06b6d4', colorSoft: '#06b6d412', maxWip: 50 },
+  { id: 'e1', nombre: 'Preliminares',       orden: 1, categoria: 'Obra gris',   color: colorForIndex(0), colorSoft: colorSoftForIndex(0), maxWip: 3 },
+  { id: 'e2', nombre: 'Cimentación',        orden: 2, categoria: 'Obra gris',   color: colorForIndex(1), colorSoft: colorSoftForIndex(1), maxWip: 3 },
+  { id: 'e3', nombre: 'Estructura',         orden: 3, categoria: 'Obra gris',   color: colorForIndex(2), colorSoft: colorSoftForIndex(2), maxWip: 3 },
+  { id: 'e4', nombre: 'Paredes',            orden: 4, categoria: 'Obra gris',   color: colorForIndex(3), colorSoft: colorSoftForIndex(3), maxWip: 3 },
+  { id: 'e5', nombre: 'Instalaciones',      orden: 5, categoria: 'Acabados',    color: colorForIndex(4), colorSoft: colorSoftForIndex(4), maxWip: 3 },
+  { id: 'e6', nombre: 'Acabados',           orden: 6, categoria: 'Acabados',    color: colorForIndex(5), colorSoft: colorSoftForIndex(5), maxWip: 3 },
   { id: 'e7', nombre: 'Entrega',            orden: 7, categoria: 'Cierre',      color: colorForIndex(6), colorSoft: colorSoftForIndex(6) },
 ];
 
 let mockCasas: Casa[] = [
+  // Freezer
+  { id: 'c15', lote: 'L-15', modelo: 'Modelo A', proyecto: 'Torres del Valle',         vendedor: 'Jorge Arias',    comprador: 'Felipe Mora',    etapaId: 'e0', estado: 'Pendiente',   avance: 0,   fechaInicio: '2026-03-01', fechaFinEsperada: '2026-09-30' },
   // Preliminares
   { id: 'c1',  lote: 'L-01', modelo: 'Modelo A', proyecto: 'Residencial Los Robles',   vendedor: 'Carlos Mora',    comprador: 'Ana Jiménez',    etapaId: 'e1', estado: 'En proceso',  avance: 35,  fechaInicio: '2026-01-15', fechaFinEsperada: '2026-04-30' },
   { id: 'c2',  lote: 'L-02', modelo: 'Modelo B', proyecto: 'Residencial Los Robles',   vendedor: 'Carlos Mora',    comprador: 'Pedro Solís',    etapaId: 'e1', estado: 'Pendiente',   avance: 10,  fechaInicio: '2026-02-01', fechaFinEsperada: '2026-05-15' },
@@ -58,8 +61,62 @@ export function useCasas() {
 export function useMoverCasa() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ casaId, etapaId }: { casaId: string; etapaId: string }) => {
-      mockCasas = mockCasas.map(c => c.id === casaId ? { ...c, etapaId } : c);
+    mutationFn: async ({ casaId, etapaId, insertIndex }: { casaId: string; etapaId: string; insertIndex?: number }) => {
+      // Mover la casa a la nueva etapa y reordenar si se especifica insertIndex
+      const casa = mockCasas.find(c => c.id === casaId);
+      if (!casa) return;
+      const updated = mockCasas.filter(c => c.id !== casaId);
+      const movedCasa = { ...casa, etapaId };
+      if (insertIndex != null) {
+        // Insertar en la posición exacta entre las casas de esa etapa
+        const inEtapa = updated.filter(c => c.etapaId === etapaId);
+        const others = updated.filter(c => c.etapaId !== etapaId);
+        inEtapa.splice(insertIndex, 0, movedCasa);
+        mockCasas = [...others, ...inEtapa];
+      } else {
+        mockCasas = [...updated, movedCasa];
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['casas'] });
+    },
+  });
+}
+
+export function useCompletarCasa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (casaId: string) => {
+      mockCasas = mockCasas.map(c =>
+        c.id === casaId
+          ? { ...c, estado: 'Completado', avance: 100, fechaCompletado: new Date().toISOString().slice(0, 10) }
+          : c
+      );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['casas'] });
+    },
+  });
+}
+
+export function useActualizarCasa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ casaId, cambios }: { casaId: string; cambios: Partial<Casa> }) => {
+      mockCasas = mockCasas.map(c => c.id === casaId ? { ...c, ...cambios } : c);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['casas'] });
+    },
+  });
+}
+
+export function useCrearCasa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nueva: Omit<Casa, 'id'> & { id?: string }) => {
+      const id = nueva.id ?? `c${Date.now()}`;
+      mockCasas = [{ ...nueva, id }, ...mockCasas];
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['casas'] });

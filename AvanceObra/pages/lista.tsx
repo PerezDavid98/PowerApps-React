@@ -1,14 +1,15 @@
 import React from 'react';
 import { useAtom, useAtomValue } from 'jotai';
-import { busquedaAtom, seleccionadaAtom } from '../store/atoms';
+import { busquedaAtom, detalleModoAtom, seleccionadaAtom } from '../store/atoms';
 import { useEtapas, useCasas } from '../lib/dataverse';
 import { BarraAvance } from '../components/ui/barra-avance';
-import { PanelDetalle } from '../components/kanban/panel-detalle';
+import { PanelDetalle } from '../components/kanban/panelDetalle';
 import { ESTADO_STYLES } from '../store/data';
 
 export default function ListaPage() {
   const busqueda = useAtomValue(busquedaAtom);
   const [seleccionada, setSeleccionada] = useAtom(seleccionadaAtom);
+  const [, setDetalleModo] = useAtom(detalleModoAtom);
 
   const etapasQ = useEtapas();
   const casasQ  = useCasas();
@@ -51,7 +52,10 @@ export default function ListaPage() {
                 const estadoStyle = ESTADO_STYLES[c.estado] ?? ESTADO_STYLES['Pendiente'];
                 return (
                   <div key={c.id}
-                    onClick={() => setSeleccionada(prev => prev?.id === c.id ? null : c)}
+                    onClick={() => {
+                      setDetalleModo('view');
+                      setSeleccionada(prev => prev?.id === c.id ? null : c);
+                    }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12,
                       padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
@@ -89,7 +93,7 @@ export default function ListaPage() {
         )}
       </div>
 
-      <PanelDetalle etapas={etapas} />
+      <PanelDetalle etapas={etapas} casas={casas} />
     </>
   );
 }

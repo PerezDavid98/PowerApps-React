@@ -42,6 +42,7 @@ export interface Etapa {
   categoria?: string;
   color: string;
   colorSoft: string;
+  maxWip?: number;
 }
 
 export interface Casa {

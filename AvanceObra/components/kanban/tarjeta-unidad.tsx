@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAtom } from 'jotai';
-import { seleccionadaAtom } from '../../store/atoms';
+import { detalleModoAtom, seleccionadaAtom } from '../../store/atoms';
 import type { Casa, Etapa } from '../../store/data';
 import { ESTADO_STYLES } from '../../store/data';
 import { BarraAvance } from '../ui/barra-avance';
@@ -9,40 +9,59 @@ export const TarjetaCasa: React.FC<{
   casa: Casa;
   etapa: Etapa;
   isDragging: boolean;
+  enCola?: boolean;
   onDragStart: (e: React.DragEvent) => void;
   onDragEnd: () => void;
-}> = ({ casa, etapa, isDragging, onDragStart, onDragEnd }) => {
+}> = ({ casa, etapa, isDragging, enCola, onDragStart, onDragEnd }) => {
   const [hov, setHov] = useState(false);
   const [seleccionada, setSeleccionada] = useAtom(seleccionadaAtom);
   const activa = seleccionada?.id === casa.id;
   const estadoStyle = ESTADO_STYLES[casa.estado] ?? ESTADO_STYLES['Pendiente'];
+  const [, setDetalleModo] = useAtom(detalleModoAtom);
 
   return (
     <div
       draggable
-      onClick={() => setSeleccionada(prev => prev?.id === casa.id ? null : casa)}
+      onClick={() => {
+        if (enCola) return;
+        setDetalleModo('view');
+        setSeleccionada(prev => prev?.id === casa.id ? null : casa);
+      }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       style={{
-        background:   activa ? '#f0f9e8' : hov ? '#f8fafc' : '#ffffff',
+        background:   enCola ? '#f8f8f8' : activa ? '#f0f9e8' : hov ? '#f8fafc' : '#ffffff',
         borderRadius: 10,
         padding:      '12px 12px 10px',
-        cursor:       isDragging ? 'grabbing' : 'grab',
+        cursor:       enCola ? 'not-allowed' : isDragging ? 'grabbing' : 'grab',
         marginBottom: 8,
         transition:   'background .15s, box-shadow .15s, opacity .2s, transform .15s',
-        boxShadow:    hov || activa
-          ? `0 4px 16px #00000018, 0 0 0 1.5px ${etapa.color}60`
-          : '0 1px 4px #00000012',
+        boxShadow:    enCola
+          ? 'none'
+          : hov || activa
+            ? `0 4px 16px #00000018, 0 0 0 1.5px ${etapa.color}60`
+            : '0 1px 4px #00000012',
         userSelect:   'none',
-        opacity:      isDragging ? 0.45 : 1,
+        opacity:      enCola ? 0.5 : isDragging ? 0.45 : 1,
         transform:    isDragging ? 'scale(0.97) rotate(-1deg)' : 'none',
-        borderLeft:   `3px solid ${etapa.color}`,
-        border:       activa ? `1.5px solid ${etapa.color}` : undefined,
+        borderLeft:   `3px solid ${enCola ? '#cbd5e1' : etapa.color}`,
+        border:       activa && !enCola ? `1.5px solid ${etapa.color}` : undefined,
         borderLeftWidth: '3px',
+        filter:       enCola ? 'grayscale(0.6)' : 'none',
+        position:     'relative',
       }}
     >
+      {enCola && (
+        <div style={{
+          position: 'absolute', top: 5, right: 6,
+          background: '#ef444425', color: '#ef4444',
+          borderRadius: 8, padding: '1px 7px',
+          fontSize: 9, fontWeight: 700,
+          border: '1px solid #ef444430',
+        }}>EN COLA</div>
+      )}
       {/* Lote + estado */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
         <span style={{ fontSize: 13, fontWeight: 800, color: '#1a2535', letterSpacing: '.2px', flex: 1 }}>
